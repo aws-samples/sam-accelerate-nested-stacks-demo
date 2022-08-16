@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  orders-app
+
+  Root stack for managing orders-app resources
+
+Parameters:
+  GetOrders:
+    Type: String
+    Description: GetOrders Function ARN
+  PostOrders:
+    Type: String
+    Description: PostOrders Function ARN
+  GetSingleOrder:
+    Type: String
+    Description: GetSingleOrder Function ARN
+  UpdateOrder:
+    Type: String
+    Description: UpdateOrder Function ARN
+  DeleteOrder:
+    Type: String
+    Description: DeleteOrder Function ARN
+  OrderQueueArn:
+    Type: String
+    Description: Order Queue ARN
+
+Resources:
+  OrderApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Dev
+      MethodSettings:
+        - HttpMethod: "*"
+          LoggingLevel: INFO
+          ResourcePath: "/*"
+          MetricsEnabled: true
+      Cors:
+        AllowMethods: "'POST, GET, UPDATE, DELETE'"
+        AllowHeaders: "'X-Forwarded-For'"
+        AllowOrigin: "'*'"
+        MaxAge: "'600'"
+      DefinitionBody:
+        "Fn::Transform":
+          Name: "AWS::Include"
+          Parameters:
+            Location: definition/openapi.yaml
+
+  ApiGwExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: ApiGwExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action: sqs:SendMessage
+                Effect: Allow
+                Resource:
+                  - Ref: OrderQueueArn
+              - Action: lambda:*
+                Effect: Allow
+                Resource:
+                  - Ref: GetOrders
+                  - Ref: PostOrders
+                  - Ref: GetSingleOrder
+                  - Ref: UpdateOrder
+                  - Ref: DeleteOrder
+
+Outputs:
+  OrderApiEndpoint:
+    Description: "API Gateway endpoint URL for Dev stage for Order Get function"
+    Value: !Sub "https://${OrderApi}.execute-api.${AWS::Region}.amazonaws.com/Dev/orders/"

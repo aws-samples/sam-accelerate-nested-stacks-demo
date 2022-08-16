@@ -1,0 +1,92 @@
+openapi: 3.0.1
+info:
+  title: order-app
+  version: '1.0'
+servers:
+  - url: /Dev
+paths:
+  /orders:
+    get:
+      x-amazon-apigateway-integration:
+        credentials:
+          Fn::GetAtt:
+            - ApiGwExecutionRole
+            - Arn
+        type: aws_proxy
+        httpMethod: POST
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetOrders}/invocations
+        passthroughBehavior: when_no_match
+    post:
+      summary: create a new order
+      description: "place an order message onto sqs queue for processing"
+      responses:
+        "200":
+          description: create order request successfully handled
+        "400":
+          description: Bad reqeust
+        "500":
+          description: Server Error
+      x-amazon-apigateway-integration:
+        type: aws
+        credentials:
+          Fn::GetAtt:
+            - ApiGwExecutionRole
+            - Arn
+        httpMethod: POST
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:sqs:path/${AWS::AccountId}/${OrderQueueName}
+        requestParameters:
+          integration.request.header.Content-Type: "'application/x-www-form-urlencoded'"
+        requestTemplates:
+          application/json: "Action=SendMessage&MessageBody={\"data\":$input.json('$')}"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: "NEVER"
+  /orders/{orderId+}:
+    get:
+      x-amazon-apigateway-integration:
+        credentials: 
+          Fn::GetAtt:
+            - ApiGwExecutionRole
+            - Arn
+        type: "aws_proxy"
+        httpMethod: POST
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetSingleOrder}/invocations
+        passthroughBehavior: "when_no_match"
+    put:
+      parameters:
+      - name: "orderId"
+        in: "path"
+        required: true
+        schema:
+          type: "string"
+      x-amazon-apigateway-integration:
+        credentials: 
+          Fn::GetAtt: [ ApiGwExecutionRole, Arn ]
+        httpMethod: POST
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateOrder}/invocations
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: "when_no_match"
+        type: "aws_proxy"
+    delete:
+      parameters:
+      - name: "orderId"
+        in: "path"
+        required: true
+        schema:
+          type: "string"
+      x-amazon-apigateway-integration:
+        credentials: 
+          Fn::GetAtt: [ ApiGwExecutionRole, Arn ]
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteOrder}/invocations
+        passthroughBehavior: "when_no_match"
+components: {}

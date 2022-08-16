@@ -1,0 +1,156 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  orders-app
+
+  Stack containing REST API, integrated Lambda functions, and integrated SQS queue
+
+Globals:
+  Function:
+    Timeout: 5
+    Runtime: python3.9
+
+Parameters:
+  OrderTableName:
+    Type: String
+    Description: DynamoDB Order Table
+  OrderWorkflowSfnArn:
+    Type: String
+    Description: Order Workflow Step Function ARN
+  OrderWorkflowSfnName:
+    Type: String
+    Description: Order Workflow Step Function Name
+
+Resources:
+  OrderQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt OrderDLQueue.Arn
+        maxReceiveCount: 5
+
+  OrderDLQueue:
+    Type: AWS::SQS::Queue
+
+  OrderQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - sqs:*
+            Effect: Allow
+            Principal:
+              AWS: !Ref AWS::AccountId
+            Resource: !GetAtt OrderQueue.Arn
+      Queues:
+        - !Ref OrderQueue
+
+  GetOrders:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/get_orders/
+      Handler: app.handler
+      Environment:
+        Variables:
+          ORDER_TABLE: !Ref OrderTableName
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref OrderTableName
+
+  PostOrders:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/post_orders/
+      Handler: app.handler
+      Events:
+        SQSEventSource:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt OrderQueue.Arn
+            BatchSize: 10
+      Environment:
+        Variables:
+          ORDER_TABLE: !Ref OrderTableName
+          STATE_MACHINE_ARN: !Ref OrderWorkflowSfnArn
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref OrderTableName
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !Ref OrderWorkflowSfnName
+
+  GetSingleOrder:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/get_single_order/
+      Handler: app.handler
+      Environment:
+        Variables:
+          ORDER_TABLE: !Ref OrderTableName
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref OrderTableName
+
+  UpdateOrder:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/update_order/
+      Handler: app.handler
+      Environment:
+        Variables:
+          ORDER_TABLE: !Ref OrderTableName
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref OrderTableName
+        - DynamoDBReadPolicy:
+            TableName: !Ref OrderTableName
+
+  DeleteOrder:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/delete_order/
+      Handler: app.handler
+      Environment:
+        Variables:
+          ORDER_TABLE: !Ref OrderTableName
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrderTableName
+
+Outputs:
+  GetOrders:
+    Description: "GetOrders Lambda Function ARN"
+    Value: !GetAtt GetOrders.Arn
+
+  PostOrders:
+    Description: "PostOrders Lambda Function ARN"
+    Value: !GetAtt PostOrders.Arn
+
+  GetSingleOrder:
+    Description: "GetSingleOrder Lambda Function ARN"
+    Value: !GetAtt GetSingleOrder.Arn
+
+  UpdateOrder:
+    Description: "UpdateOrder Lambda Function ARN"
+    Value: !GetAtt UpdateOrder.Arn
+
+  DeleteOrder:
+    Description: "DeleteOrder Lambda Function ARN"
+    Value: !GetAtt DeleteOrder.Arn
+
+  OrderQueueUrl:
+    Description: "URL of order queue"
+    Value: !Ref OrderQueue
+
+  OrderDLQueueUrl:
+    Description: "URL of order dead-letter queue"
+    Value: !Ref OrderDLQueue
+
+  OrderQueueName:
+    Description: "Queue name OrderQueue"
+    Value: !GetAtt OrderQueue.QueueName
+
+  OrderQueueArn:
+    Description: "Order Queue ARN"
+    Value: !GetAtt OrderQueue.Arn

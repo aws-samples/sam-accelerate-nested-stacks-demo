@@ -1,0 +1,60 @@
+{
+  "Comment": "This workflow processes orders",
+  "StartAt": "InitializeOrder",
+  "States": {
+    "InitializeOrder": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${InitializeOrderArn}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "ProcessPayment",
+      "Comment": "Save pending order and check payment",
+      "ResultSelector": {
+        "saveResults.$": "States.StringToJson($.Payload.body)"
+      }
+    },
+    "ProcessPayment": {
+      "Comment": "Process the payment and save the return value.",
+      "Type": "Task",
+      "Resource": "${ProcessPaymentArn}",
+      "ResultPath": "$.paymentResult",
+      "Next": "PaymentChoice"
+    },
+    "PaymentChoice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.paymentResult.status",
+          "StringMatches": "ok",
+          "Next": "CompleteOrder"
+        }
+      ],
+      "Default": "PaymentFailure"
+    },
+    "CompleteOrder": {
+      "Comment": "Complete order and update table",
+      "Type": "Task",
+      "Resource": "${CompleteOrderArn}",
+      "End": true
+    },
+    "PaymentFailure": {
+      "Type": "Task",
+      "Resource": "${CancelFailedOrderArn}",
+      "End": true
+    }
+  }
+}

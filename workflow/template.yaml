@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  orders-app
+
+  Stack containing Order Workflow Step Function and Tasks
+
+Globals:
+  Function:
+    Timeout: 5
+    Runtime: python3.9
+
+Parameters:
+  OrderTableName:
+    Type: String
+    Description: DynamoDB Order Table
+
+  SubscriptionEmail:
+    Type: String
+    Description: Email endpoint for Order Notifications
+
+Resources:
+  ProcessPayment:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/process_payment/
+      Handler: app.handler
+
+  InitializeOrder:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/initialize_order/
+      Handler: app.handler
+      Environment:
+        Variables:
+          ORDER_TABLE: !Ref OrderTableName
+          TOPIC_ARN: !Ref OrderNotificationTopic
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref OrderTableName
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt OrderNotificationTopic.TopicName
+
+  CompleteOrder:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/complete_order/
+      Handler: app.handler
+      Environment:
+        Variables:
+          ORDER_TABLE: !Ref OrderTableName
+          TOPIC_ARN: !Ref OrderNotificationTopic
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref OrderTableName
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt OrderNotificationTopic.TopicName
+
+  CancelFailedOrder:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/cancel_failed_order/
+      Handler: app.handler
+      Environment:
+        Variables:
+          ORDER_TABLE: !Ref OrderTableName
+          TOPIC_ARN: !Ref OrderNotificationTopic
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref OrderTableName
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt OrderNotificationTopic.TopicName
+
+  OrderWorkflowSfn:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: statemachine/order_workflow.asl.json
+      DefinitionSubstitutions:
+        InitializeOrderArn: !GetAtt InitializeOrder.Arn
+        ProcessPaymentArn: !GetAtt ProcessPayment.Arn
+        CompleteOrderArn: !GetAtt CompleteOrder.Arn
+        CancelFailedOrderArn: !GetAtt CancelFailedOrder.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref InitializeOrder
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ProcessPayment
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CancelFailedOrder
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CompleteOrder
+
+  OrderNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Endpoint: !Ref SubscriptionEmail
+          Protocol: "email"
+      TopicName: !Join ["-", ["order-topic", !Select [2, !Split ["/", !Ref "AWS::StackId"]]]]
+
+Outputs:
+  OrderWorkflowSfnArn:
+    Description: Order Workflow Step Function ARN
+    Value: !Ref OrderWorkflowSfn
+  OrderWorkflowSfnName:
+    Description: Order Workflow Step Function Name
+    Value: !GetAtt OrderWorkflowSfn.Name

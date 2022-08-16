@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  orders-app
+
+  Root stack for managing orders-app resources
+
+Parameters:
+  SubscriptionEmail:
+    Type: String
+    Description: Email endpoint for Order Notifications
+
+Resources:
+  DynamoDB:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: db/template.yaml
+
+  OrderWorkflow:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: workflow/template.yaml
+      Parameters:
+        OrderTableName: !GetAtt DynamoDB.Outputs.DynamoDBTableName
+        SubscriptionEmail: !Ref SubscriptionEmail
+
+  ApiIntegrations:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: api-integrations/template.yaml
+      Parameters:
+        OrderTableName: !GetAtt DynamoDB.Outputs.DynamoDBTableName
+        OrderWorkflowSfnArn: !GetAtt OrderWorkflow.Outputs.OrderWorkflowSfnArn
+        OrderWorkflowSfnName: !GetAtt OrderWorkflow.Outputs.OrderWorkflowSfnName
+
+  Api:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: api/template.yaml
+      Parameters:
+        GetOrders: !GetAtt ApiIntegrations.Outputs.GetOrders
+        PostOrders: !GetAtt ApiIntegrations.Outputs.PostOrders
+        GetSingleOrder: !GetAtt ApiIntegrations.Outputs.GetSingleOrder
+        UpdateOrder: !GetAtt ApiIntegrations.Outputs.UpdateOrder
+        DeleteOrder: !GetAtt ApiIntegrations.Outputs.DeleteOrder
+        OrderQueueName: !GetAtt ApiIntegrations.Outputs.OrderQueueName
+        OrderQueueArn: !GetAtt ApiIntegrations.Outputs.OrderQueueArn
+
+Outputs:
+  DynamoDBTableName:
+    Description: "Orders DynamoDB Table Name"
+    Value: !GetAtt DynamoDB.Outputs.DynamoDBTableName
+
+  OrderApiEndpoint:
+    Description: "Orders API Gateway Endpoint URL"
+    Value: !GetAtt Api.Outputs.OrderApiEndpoint
