@@ -102,7 +102,7 @@ If you would like to see the full solution work, read below.
 ```bash
 curl -s --header "Content-Type: application/json" \
   --request POST \
-  --data '{"quantity":1,"name":"Pizza","restaurantId":"House of Pizza"}' \
+  --data '{"quantity":5,"name":"Rellenos","restaurantId":"San Miguels"}' \
   https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/Dev/orders  | python -m json.tool
 ```
 
