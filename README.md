@@ -99,6 +99,12 @@ If you would like to see the full solution work, read below.
   "restaurantId": "San Miguels"
 }
 ```
+```bash
+curl -s --header "Content-Type: application/json" \
+  --request POST \
+  --data '{"quantity":5,"name":"Rellenos","restaurantId":"San Miguels"}' \
+  https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/Dev/orders  | python -m json.tool
+```
 
 ## Response
 
