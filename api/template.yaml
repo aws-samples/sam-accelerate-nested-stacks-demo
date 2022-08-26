@@ -21,6 +21,9 @@ Parameters:
   DeleteOrder:
     Type: String
     Description: DeleteOrder Function ARN
+  OrderQueueName:
+    Type: String
+    Description: Order Queue Name
   OrderQueueArn:
     Type: String
     Description: Order Queue ARN
