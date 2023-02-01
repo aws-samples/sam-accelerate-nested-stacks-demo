@@ -60,7 +60,7 @@ function does not require a CloudFormation build.
 
 ### Make an infrastructure change
 
-Now change a file which affects an AWS resource. In the `db/template.yaml` file, change
+Now change a file that affects an AWS resource. In the `db/template.yaml` file, change
 `ReadCapacityUnits` and `WriteCapacityUnits` from `5` to `1`:
 
 ```yaml
@@ -75,7 +75,7 @@ build to update the changed resources.
 
 ## Testing the API
 
-It's unnecessary to test the API in order to take advantage of SAM Accelerate in this repository.
+It's unnecessary to test the API to take advantage of SAM Accelerate in this repository.
 If you would like to see the full solution work, read below.
 
 ## Resources / Methods
