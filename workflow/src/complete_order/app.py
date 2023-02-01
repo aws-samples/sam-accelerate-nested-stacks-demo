@@ -16,7 +16,6 @@ class DecimalEncoder(json.JSONEncoder):
         return super(DecimalEncoder, self).default(o)
 
 def update_order(order_status, event):
-
     response = table.update_item(
         Key={
             "user_id": event["saveResults"]["user_id"],

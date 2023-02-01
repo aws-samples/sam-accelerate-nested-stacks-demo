@@ -1,6 +1,4 @@
 import boto3
-import json
-import os
 import math
 import random
 

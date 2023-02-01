@@ -1,6 +1,4 @@
-from datetime import datetime
 import boto3
-import uuid
 import os
 import json
 import decimal
@@ -55,7 +53,3 @@ def handler(event, context):
     response = update_order(order_status, error_message, event)
     print(f'update_order.response: {response}')
     return response
-
-
-
-

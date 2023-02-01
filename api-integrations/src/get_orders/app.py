@@ -1,7 +1,6 @@
 import boto3
 import os
 import json
-from typing import Dict, Any
 
 ddb_client = boto3.client("dynamodb")
 TABLE_NAME = os.environ.get("ORDER_TABLE")
@@ -34,8 +33,3 @@ def handler(event, context):
         "statusCode": 200,
         "body": json.dumps(items, indent=4)
     }
-
-
-
-
-

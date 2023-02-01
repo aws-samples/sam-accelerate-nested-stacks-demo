@@ -2,7 +2,6 @@ import boto3
 import os
 import json
 import decimal
-from typing import Dict, Any
 
 TABLE_NAME = os.environ.get("ORDER_TABLE")
 dynamodb = boto3.resource("dynamodb")
@@ -31,9 +30,3 @@ def handler(event, context):
         "statusCode": 200,
         "body": json.dumps(item["Item"], indent=4, cls=DecimalEncoder)
     }
-    
-
-
-
-
-

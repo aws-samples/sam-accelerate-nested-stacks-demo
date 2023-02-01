@@ -1,6 +1,5 @@
 from datetime import datetime
 import boto3
-import uuid
 import os
 import json
 import decimal
@@ -60,8 +59,3 @@ def handler(event, context):
         'statusCode': 200,
         'body': json.dumps(response, indent=4, cls=DecimalEncoder)
     }
-
-
-
-
-
