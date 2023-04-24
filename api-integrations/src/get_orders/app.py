@@ -11,12 +11,12 @@ def fetch_all_orders(dynamo_client, table_name):
     last_evaluated_key = None
     while True:
         if last_evaluated_key:
-            response = ddb_client.scan(
+            response = dynamo_client.scan(
                 TableName=table_name,
                 ExclusiveStartKey=last_evaluated_key
             )
         else:
-            response = ddb_client.scan(TableName=table_name)
+            response = dynamo_client.scan(TableName=table_name)
             
         last_evaluated_key = response.get('LastEvaluatedKey')
 
