@@ -24,7 +24,7 @@ paths:
         "200":
           description: create order request successfully handled
         "400":
-          description: Bad reqeust
+          description: Bad request
         "500":
           description: Server Error
       x-amazon-apigateway-integration:
